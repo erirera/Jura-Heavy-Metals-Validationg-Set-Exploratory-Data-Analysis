@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Jura EDA Dashboard — Validation Set (n=100)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0f0f1a;color:#e0e0ff;min-height:100vh}
+header{background:linear-gradient(135deg,#1a1a3e 0%,#0d0d2b 100%);padding:28px 40px;border-bottom:1px solid #2a2a5a;display:flex;align-items:center;gap:20px}
+.logo{font-size:2rem}
+.header-text h1{font-size:1.6rem;font-weight:700;background:linear-gradient(90deg,#4cc9f0,#7209b7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-text p{font-size:.85rem;color:#8888bb;margin-top:4px}
+.badge{background:rgba(76,201,240,.15);border:1px solid #4cc9f0;color:#4cc9f0;border-radius:20px;padding:4px 14px;font-size:.78rem;font-weight:600;margin-left:auto}
+main{padding:32px 40px;max-width:1600px;margin:0 auto}
+.section-title{font-size:1.1rem;font-weight:700;color:#a0a0ff;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title::before{content:'';display:inline-block;width:4px;height:18px;background:linear-gradient(180deg,#4cc9f0,#7209b7);border-radius:2px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;margin-bottom:36px}
+.kpi-card{background:linear-gradient(135deg,#1a1a3e,#12122a);border:1px solid #2a2a5a;border-radius:14px;padding:20px;transition:transform .2s,border-color .2s;cursor:default}
+.kpi-card:hover{transform:translateY(-3px);border-color:#4cc9f0}
+.kpi-metal{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.kpi-mean{font-size:2rem;font-weight:700;line-height:1}
+.kpi-unit{font-size:.75rem;color:#6666aa;margin-top:2px}
+.kpi-row{display:flex;gap:16px;font-size:.78rem;margin-top:10px;color:#8888bb}
+.kpi-row span b{color:#c0c0ff}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+.card{background:#13132b;border:1px solid #2a2a5a;border-radius:14px;padding:24px}
+.card-title{font-size:.85rem;font-weight:600;color:#8888cc;margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px}
+canvas{max-height:260px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;font-size:.8rem;color:#8888bb}
+select{background:#1a1a3e;border:1px solid #3a3a6a;color:#e0e0ff;padding:6px 12px;border-radius:8px;font-family:inherit;font-size:.82rem;cursor:pointer}
+#corrCanvas{max-height:380px!important;height:380px;max-width:100%}
+.stat-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.stat-table th{background:#1a1a3e;color:#8888bb;padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid #2a2a5a}
+.stat-table td{padding:8px 12px;border-bottom:1px solid #1e1e40}
+.stat-table tr:hover td{background:rgba(76,201,240,.05)}
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;margin-bottom:36px}
+footer{text-align:center;padding:24px;color:#444466;font-size:.78rem;border-top:1px solid #1a1a3a}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&#127758;</div>
+  <div class="header-text">
+    <h1>Jura Heavy Metals &mdash; Exploratory Data Analysis</h1>
+    <p>Validation Set &middot; Swiss Jura Region &middot; Spatial Geochemical Survey</p>
+  </div>
+  <div class="badge">n = 100 samples</div>
+</header>
+<main>
+<div class="section-title">Summary Statistics</div>
+<div class="kpi-grid" id="kpiGrid"></div>
+<div class="card" style="margin-bottom:36px">
+  <div class="card-title">Descriptive Statistics &mdash; All Metals (ppm)</div>
+  <table class="stat-table">
+    <thead><tr><th>Metal</th><th>Min</th><th>Q1</th><th>Median</th><th>Mean</th><th>Q3</th><th>Max</th><th>Std Dev</th></tr></thead>
+    <tbody id="statTbody"></tbody>
+  </table>
+</div>
+<div class="section-title">Frequency Distributions</div>
+<div class="hist-grid" id="histGrid"></div>
+<div class="section-title">Correlation Analysis</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Pearson Correlation Heatmap</div>
+    <canvas id="corrCanvas"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Metal Pair Scatter Plot</div>
+    <div class="controls">X: <select id="scatX"></select> &nbsp; Y: <select id="scatY"></select></div>
+    <canvas id="scatCanvas"></canvas>
+  </div>
+</div>
+<div class="section-title">Spatial Distribution</div>
+<div class="card" style="margin-bottom:36px">
+  <div class="card-title">Sample Locations &mdash; Color-coded by concentration</div>
+  <div class="controls">Metal: <select id="spatialSel"></select></div>
+  <canvas id="spatialCanvas" style="max-height:400px"></canvas>
+</div>
+<div class="section-title">By Rock Type &amp; Land Use</div>
+<div class="grid-2">
+  <div class="card"><div class="card-title">Count by Rock Type</div><canvas id="rockCount"></canvas></div>
+  <div class="card"><div class="card-title">Count by Land Use</div><canvas id="landCount"></canvas></div>
+</div>
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-title">Mean by Rock Type</div>
+    <div class="controls">Metal: <select id="rockMetal"></select></div>
+    <canvas id="rockMetalChart"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Mean by Land Use</div>
+    <div class="controls">Metal: <select id="landMetal"></select></div>
+    <canvas id="landMetalChart"></canvas>
+  </div>
+</div>
+</main>
+<footer>Jura EDA Dashboard &middot; Swiss Jura Heavy Metals Dataset &middot; Validation Set (n=100)</footer>
+<script>
+var ROWS = [{"id": 1, "x": 2.672, "y": 3.558, "rock": 5, "land": 3, "Cd": 1.57, "Cu": 18.6, "Pb": 38.2, "Co": 8.28, "Cr": 37.12, "Ni": 18.6, "Zn": 65.2}, {"id": 2, "x": 3.589, "y": 4.443, "rock": 1, "land": 3, "Cd": 2.045, "Cu": 11.48, "Pb": 33.36, "Co": 10.8, "Cr": 40.8, "Ni": 21.52, "Zn": 112.8}, {"id": 3, "x": 4.01, "y": 4.713, "rock": 1, "land": 2, "Cd": 1.203, "Cu": 113.04, "Pb": 26.56, "Co": 12.0, "Cr": 53.2, "Ni": 23.92, "Zn": 91.6}, {"id": 4, "x": 2.942, "y": 3.137, "rock": 5, "land": 2, "Cd": 0.49, "Cu": 5.64, "Pb": 25.88, "Co": 10.92, "Cr": 23.4, "Ni": 14.6, "Zn": 41.2}, {"id": 5, "x": 1.409, "y": 2.748, "rock": 3, "land": 3, "Cd": 0.692, "Cu": 10.32, "Pb": 31.16, "Co": 8.12, "Cr": 27.16, "Ni": 14.64, "Zn": 50.4}, {"id": 6, "x": 3.978, "y": 2.91, "rock": 2, "land": 1, "Cd": 1.75, "Cu": 8.36, "Pb": 37.72, "Co": 9.12, "Cr": 35.48, "Ni": 26.4, "Zn": 63.2}, {"id": 7, "x": 2.715, "y": 2.1, "rock": 2, "land": 1, "Cd": 0.415, "Cu": 4.44, "Pb": 41.0, "Co": 9.12, "Cr": 30.32, "Ni": 24.24, "Zn": 53.16}, {"id": 8, "x": 3.87, "y": 0.762, "rock": 3, "land": 2, "Cd": 0.685, "Cu": 10.92, "Pb": 30.84, "Co": 11.72, "Cr": 31.92, "Ni": 13.12, "Zn": 49.28}, {"id": 9, "x": 2.445, "y": 2.521, "rock": 2, "land": 3, "Cd": 0.92, "Cu": 30.28, "Pb": 68.12, "Co": 10.56, "Cr": 49.04, "Ni": 31.52, "Zn": 102.72}, {"id": 10, "x": 3.827, "y": 2.219, "rock": 2, "land": 1, "Cd": 2.12, "Cu": 7.35, "Pb": 54.4, "Co": 6.36, "Cr": 23.0, "Ni": 14.52, "Zn": 72.4}, {"id": 11, "x": 2.488, "y": 1.064, "rock": 1, "land": 3, "Cd": 0.495, "Cu": 17.08, "Pb": 46.8, "Co": 8.52, "Cr": 31.4, "Ni": 16.12, "Zn": 57.6}, {"id": 12, "x": 1.646, "y": 0.524, "rock": 2, "land": 2, "Cd": 1.06, "Cu": 18.88, "Pb": 55.2, "Co": 14.44, "Cr": 37.28, "Ni": 25.24, "Zn": 76.4}, {"id": 13, "x": 3.136, "y": 2.37, "rock": 4, "land": 1, "Cd": 0.79, "Cu": 3.98, "Pb": 35.28, "Co": 5.2, "Cr": 33.12, "Ni": 14.92, "Zn": 32.6}, {"id": 14, "x": 3.74, "y": 5.134, "rock": 1, "land": 1, "Cd": 0.772, "Cu": 8.16, "Pb": 30.16, "Co": 10.84, "Cr": 39.04, "Ni": 24.24, "Zn": 56.8}, {"id": 15, "x": 1.678, "y": 2.327, "rock": 3, "land": 3, "Cd": 1.188, "Cu": 31.36, "Pb": 72.4, "Co": 9.68, "Cr": 37.44, "Ni": 22.36, "Zn": 108.4}, {"id": 16, "x": 4.399, "y": 3.18, "rock": 4, "land": 3, "Cd": 1.615, "Cu": 91.2, "Pb": 108.8, "Co": 11.96, "Cr": 34.56, "Ni": 30.2, "Zn": 156.8}, {"id": 17, "x": 3.935, "y": 4.368, "rock": 3, "land": 3, "Cd": 3.023, "Cu": 19.72, "Pb": 45.6, "Co": 12.76, "Cr": 40.8, "Ni": 25.36, "Zn": 105.2}, {"id": 18, "x": 3.33, "y": 1.604, "rock": 3, "land": 3, "Cd": 2.315, "Cu": 113.12, "Pb": 144.36, "Co": 9.92, "Cr": 56.2, "Ni": 25.4, "Zn": 147.4}, {"id": 19, "x": 3.557, "y": 2.64, "rock": 2, "land": 1, "Cd": 2.65, "Cu": 12.3, "Pb": 54.4, "Co": 8.84, "Cr": 25.72, "Ni": 18.92, "Zn": 58.4}, {"id": 20, "x": 1.376, "y": 0.945, "rock": 1, "land": 3, "Cd": 3.78, "Cu": 32.76, "Pb": 94.4, "Co": 9.68, "Cr": 42.8, "Ni": 23.52, "Zn": 175.2}, {"id": 21, "x": 2.024, "y": 2.251, "rock": 3, "land": 3, "Cd": 1.805, "Cu": 55.6, "Pb": 142.0, "Co": 12.6, "Cr": 38.0, "Ni": 23.12, "Zn": 124.8}, {"id": 22, "x": 3.31, "y": 4.594, "rock": 5, "land": 3, "Cd": 1.58, "Cu": 56.4, "Pb": 93.6, "Co": 5.8, "Cr": 40.4, "Ni": 22.52, "Zn": 108.8}, {"id": 23, "x": 4.097, "y": 1.798, "rock": 2, "land": 4, "Cd": 1.93, "Cu": 19.3, "Pb": 46.4, "Co": 13.8, "Cr": 45.0, "Ni": 35.72, "Zn": 90.0}, {"id": 24, "x": 2.326, "y": 3.633, "rock": 1, "land": 3, "Cd": 0.415, "Cu": 18.32, "Pb": 31.92, "Co": 2.36, "Cr": 20.12, "Ni": 6.28, "Zn": 40.72}, {"id": 25, "x": 3.514, "y": 4.098, "rock": 3, "land": 2, "Cd": 0.675, "Cu": 9.24, "Pb": 27.24, "Co": 6.59, "Cr": 26.0, "Ni": 11.64, "Zn": 50.0}, {"id": 26, "x": 3.168, "y": 4.173, "rock": 1, "land": 3, "Cd": 0.745, "Cu": 8.52, "Pb": 30.28, "Co": 3.94, "Cr": 26.56, "Ni": 15.4, "Zn": 52.4}, {"id": 27, "x": 4.292, "y": 1.039, "rock": 5, "land": 3, "Cd": 1.42, "Cu": 18.8, "Pb": 36.48, "Co": 11.12, "Cr": 27.52, "Ni": 20.6, "Zn": 63.2}, {"id": 28, "x": 2.834, "y": 0.988, "rock": 3, "land": 2, "Cd": 1.425, "Cu": 13.32, "Pb": 53.6, "Co": 15.24, "Cr": 49.2, "Ni": 25.56, "Zn": 108.8}, {"id": 29, "x": 4.443, "y": 1.723, "rock": 5, "land": 2, "Cd": 1.31, "Cu": 17.7, "Pb": 48.4, "Co": 12.72, "Cr": 34.8, "Ni": 19.6, "Zn": 80.4}, {"id": 30, "x": 3.482, "y": 2.295, "rock": 2, "land": 2, "Cd": 1.765, "Cu": 127.0, "Pb": 300.0, "Co": 10.32, "Cr": 40.52, "Ni": 30.8, "Zn": 192.0}, {"id": 31, "x": 3.665, "y": 4.789, "rock": 1, "land": 3, "Cd": 0.647, "Cu": 9.76, "Pb": 21.76, "Co": 8.72, "Cr": 31.12, "Ni": 13.88, "Zn": 60.8}, {"id": 32, "x": 4.173, "y": 2.144, "rock": 2, "land": 2, "Cd": 1.81, "Cu": 17.9, "Pb": 48.8, "Co": 13.2, "Cr": 44.12, "Ni": 29.6, "Zn": 92.8}, {"id": 33, "x": 2.143, "y": 1.139, "rock": 1, "land": 3, "Cd": 0.394, "Cu": 39.56, "Pb": 105.6, "Co": 4.44, "Cr": 21.64, "Ni": 8.92, "Zn": 72.4}, {"id": 34, "x": 3.061, "y": 2.025, "rock": 2, "land": 3, "Cd": 1.6, "Cu": 20.6, "Pb": 35.72, "Co": 10.92, "Cr": 37.72, "Ni": 25.32, "Zn": 92.64}, {"id": 35, "x": 2.985, "y": 1.679, "rock": 2, "land": 3, "Cd": 1.675, "Cu": 22.92, "Pb": 61.44, "Co": 14.4, "Cr": 46.28, "Ni": 43.68, "Zn": 111.08}, {"id": 36, "x": 3.438, "y": 3.752, "rock": 2, "land": 2, "Cd": 1.28, "Cu": 13.04, "Pb": 43.6, "Co": 6.36, "Cr": 31.0, "Ni": 18.6, "Zn": 65.2}, {"id": 37, "x": 4.637, "y": 0.956, "rock": 2, "land": 3, "Cd": 0.87, "Cu": 16.5, "Pb": 35.32, "Co": 12.8, "Cr": 33.52, "Ni": 22.52, "Zn": 78.4}, {"id": 38, "x": 3.049, "y": 5.285, "rock": 2, "land": 1, "Cd": 0.8, "Cu": 7.68, "Pb": 48.4, "Co": 12.4, "Cr": 49.2, "Ni": 27.16, "Zn": 60.4}, {"id": 39, "x": 1.106, "y": 1.366, "rock": 1, "land": 3, "Cd": 0.475, "Cu": 22.68, "Pb": 55.2, "Co": 3.96, "Cr": 22.16, "Ni": 7.92, "Zn": 46.8}, {"id": 40, "x": 3.633, "y": 2.986, "rock": 2, "land": 3, "Cd": 0.855, "Cu": 25.5, "Pb": 51.6, "Co": 12.4, "Cr": 32.92, "Ni": 22.32, "Zn": 80.4}, {"id": 41, "x": 3.708, "y": 3.331, "rock": 2, "land": 2, "Cd": 1.34, "Cu": 10.32, "Pb": 41.2, "Co": 9.32, "Cr": 28.48, "Ni": 23.28, "Zn": 58.0}, {"id": 42, "x": 2.909, "y": 1.334, "rock": 1, "land": 3, "Cd": 1.805, "Cu": 28.92, "Pb": 74.36, "Co": 6.12, "Cr": 24.8, "Ni": 11.24, "Zn": 111.32}, {"id": 43, "x": 2.102, "y": 2.597, "rock": 2, "land": 3, "Cd": 0.825, "Cu": 31.2, "Pb": 70.4, "Co": 15.32, "Cr": 36.52, "Ni": 25.36, "Zn": 75.44}, {"id": 44, "x": 1.797, "y": 1.215, "rock": 1, "land": 3, "Cd": 0.545, "Cu": 33.08, "Pb": 58.0, "Co": 4.24, "Cr": 21.8, "Ni": 8.88, "Zn": 47.2}, {"id": 45, "x": 3.255, "y": 1.253, "rock": 3, "land": 3, "Cd": 1.78, "Cu": 154.6, "Pb": 239.96, "Co": 11.4, "Cr": 41.0, "Ni": 24.52, "Zn": 259.84}, {"id": 46, "x": 4.129, "y": 3.601, "rock": 2, "land": 1, "Cd": 2.566, "Cu": 7.88, "Pb": 55.2, "Co": 10.6, "Cr": 32.84, "Ni": 23.6, "Zn": 59.2}, {"id": 47, "x": 3.363, "y": 3.407, "rock": 2, "land": 2, "Cd": 0.61, "Cu": 7.86, "Pb": 34.84, "Co": 14.8, "Cr": 28.52, "Ni": 19.32, "Zn": 53.2}, {"id": 48, "x": 1.452, "y": 1.29, "rock": 1, "land": 3, "Cd": 0.585, "Cu": 15.16, "Pb": 56.4, "Co": 5.8, "Cr": 39.88, "Ni": 13.2, "Zn": 51.2}, {"id": 49, "x": 4.745, "y": 3.105, "rock": 1, "land": 1, "Cd": 1.436, "Cu": 14.2, "Pb": 32.68, "Co": 5.24, "Cr": 19.44, "Ni": 9.52, "Zn": 44.8}, {"id": 50, "x": 0.491, "y": 1.862, "rock": 3, "land": 1, "Cd": 2.415, "Cu": 21.32, "Pb": 48.4, "Co": 7.88, "Cr": 32.72, "Ni": 18.16, "Zn": 49.2}, {"id": 51, "x": 2.369, "y": 2.176, "rock": 5, "land": 3, "Cd": 0.75, "Cu": 73.12, "Pb": 139.16, "Co": 15.6, "Cr": 29.76, "Ni": 20.2, "Zn": 95.68}, {"id": 52, "x": 3.676, "y": 1.528, "rock": 3, "land": 3, "Cd": 0.805, "Cu": 38.72, "Pb": 88.32, "Co": 11.12, "Cr": 32.0, "Ni": 19.52, "Zn": 88.16}, {"id": 53, "x": 1.257, "y": 2.057, "rock": 3, "land": 2, "Cd": 0.65, "Cu": 12.8, "Pb": 41.6, "Co": 11.44, "Cr": 37.08, "Ni": 19.64, "Zn": 52.0}, {"id": 54, "x": 3.903, "y": 2.565, "rock": 2, "land": 1, "Cd": 0.51, "Cu": 5.96, "Pb": 62.4, "Co": 1.65, "Cr": 3.32, "Ni": 1.98, "Zn": 60.4}, {"id": 55, "x": 1.603, "y": 1.981, "rock": 2, "land": 4, "Cd": 0.705, "Cu": 16.04, "Pb": 38.24, "Co": 13.04, "Cr": 29.84, "Ni": 17.92, "Zn": 70.4}, {"id": 56, "x": 3.395, "y": 5.21, "rock": 3, "land": 3, "Cd": 1.112, "Cu": 13.12, "Pb": 25.56, "Co": 9.8, "Cr": 36.56, "Ni": 19.48, "Zn": 65.6}, {"id": 57, "x": 2.564, "y": 1.409, "rock": 1, "land": 4, "Cd": 1.31, "Cu": 117.6, "Pb": 152.8, "Co": 8.44, "Cr": 41.6, "Ni": 20.4, "Zn": 145.2}, {"id": 58, "x": 0.912, "y": 2.132, "rock": 2, "land": 2, "Cd": 2.2, "Cu": 11.88, "Pb": 51.6, "Co": 10.48, "Cr": 60.4, "Ni": 30.8, "Zn": 78.4}, {"id": 59, "x": 3.093, "y": 3.828, "rock": 3, "land": 3, "Cd": 0.45, "Cu": 11.5, "Pb": 30.92, "Co": 7.96, "Cr": 23.2, "Ni": 9.36, "Zn": 43.2}, {"id": 60, "x": 0.836, "y": 1.787, "rock": 3, "land": 3, "Cd": 0.825, "Cu": 12.96, "Pb": 50.0, "Co": 14.32, "Cr": 40.8, "Ni": 22.84, "Zn": 80.4}, {"id": 61, "x": 2.758, "y": 0.643, "rock": 2, "land": 1, "Cd": 1.245, "Cu": 13.08, "Pb": 88.0, "Co": 8.08, "Cr": 39.56, "Ni": 18.64, "Zn": 86.8}, {"id": 62, "x": 3.017, "y": 3.482, "rock": 2, "land": 2, "Cd": 1.09, "Cu": 8.8, "Pb": 26.32, "Co": 12.8, "Cr": 38.72, "Ni": 18.8, "Zn": 59.2}, {"id": 63, "x": 3.212, "y": 2.716, "rock": 3, "land": 3, "Cd": 0.78, "Cu": 29.8, "Pb": 60.4, "Co": 12.52, "Cr": 35.52, "Ni": 24.0, "Zn": 75.6}, {"id": 64, "x": 4.022, "y": 1.453, "rock": 2, "land": 2, "Cd": 1.95, "Cu": 22.6, "Pb": 52.0, "Co": 10.6, "Cr": 47.0, "Ni": 36.72, "Zn": 100.0}, {"id": 65, "x": 4.054, "y": 3.256, "rock": 2, "land": 3, "Cd": 1.31, "Cu": 21.16, "Pb": 52.8, "Co": 8.92, "Cr": 35.04, "Ni": 20.08, "Zn": 78.8}, {"id": 66, "x": 2.521, "y": 2.867, "rock": 2, "land": 2, "Cd": 1.585, "Cu": 11.4, "Pb": 39.36, "Co": 13.2, "Cr": 42.0, "Ni": 33.12, "Zn": 75.64}, {"id": 67, "x": 3.319, "y": 4.864, "rock": 1, "land": 2, "Cd": 0.52, "Cu": 6.04, "Pb": 21.12, "Co": 5.08, "Cr": 32.68, "Ni": 15.4, "Zn": 37.52}, {"id": 68, "x": 2.823, "y": 4.249, "rock": 1, "land": 1, "Cd": 1.005, "Cu": 7.08, "Pb": 35.4, "Co": 5.36, "Cr": 18.12, "Ni": 8.2, "Zn": 51.6}, {"id": 69, "x": 1.722, "y": 0.869, "rock": 1, "land": 3, "Cd": 0.57, "Cu": 21.36, "Pb": 67.2, "Co": 4.08, "Cr": 24.88, "Ni": 9.68, "Zn": 56.8}, {"id": 70, "x": 2.251, "y": 3.288, "rock": 5, "land": 3, "Cd": 0.33, "Cu": 5.72, "Pb": 18.68, "Co": 4.92, "Cr": 14.92, "Ni": 4.68, "Zn": 26.8}, {"id": 71, "x": 1.182, "y": 1.711, "rock": 3, "land": 2, "Cd": 2.535, "Cu": 8.72, "Pb": 55.6, "Co": 12.56, "Cr": 70.0, "Ni": 26.24, "Zn": 71.6}, {"id": 72, "x": 1.83, "y": 3.018, "rock": 3, "land": 3, "Cd": 2.685, "Cu": 32.68, "Pb": 69.32, "Co": 10.12, "Cr": 43.52, "Ni": 27.88, "Zn": 111.76}, {"id": 73, "x": 3.752, "y": 1.874, "rock": 2, "land": 2, "Cd": 0.69, "Cu": 20.8, "Pb": 55.6, "Co": 13.6, "Cr": 37.6, "Ni": 28.4, "Zn": 80.4}, {"id": 74, "x": 2.218, "y": 1.485, "rock": 1, "land": 2, "Cd": 0.375, "Cu": 19.36, "Pb": 45.2, "Co": 12.04, "Cr": 34.08, "Ni": 16.36, "Zn": 70.0}, {"id": 75, "x": 1.873, "y": 1.56, "rock": 3, "land": 3, "Cd": 1.955, "Cu": 26.08, "Pb": 60.4, "Co": 9.68, "Cr": 37.88, "Ni": 20.88, "Zn": 110.8}, {"id": 76, "x": 3.6, "y": 1.183, "rock": 2, "land": 3, "Cd": 1.985, "Cu": 22.72, "Pb": 49.72, "Co": 10.0, "Cr": 34.2, "Ni": 27.4, "Zn": 89.88}, {"id": 77, "x": 2.887, "y": 4.889, "rock": 1, "land": 1, "Cd": 1.325, "Cu": 5.4, "Pb": 37.52, "Co": 3.74, "Cr": 27.64, "Ni": 14.44, "Zn": 46.4}, {"id": 78, "x": 1.527, "y": 1.636, "rock": 3, "land": 3, "Cd": 0.795, "Cu": 12.0, "Pb": 84.8, "Co": 7.92, "Cr": 27.4, "Ni": 13.2, "Zn": 78.8}, {"id": 79, "x": 1.333, "y": 2.407, "rock": 2, "land": 3, "Cd": 1.63, "Cu": 20.56, "Pb": 46.0, "Co": 13.4, "Cr": 43.6, "Ni": 37.52, "Zn": 98.4}, {"id": 80, "x": 2.413, "y": 0.718, "rock": 3, "land": 3, "Cd": 0.677, "Cu": 11.92, "Pb": 38.16, "Co": 12.48, "Cr": 34.52, "Ni": 23.92, "Zn": 69.2}, {"id": 81, "x": 1.948, "y": 1.906, "rock": 3, "land": 3, "Cd": 1.298, "Cu": 22.24, "Pb": 45.6, "Co": 12.0, "Cr": 49.6, "Ni": 26.04, "Zn": 96.4}, {"id": 82, "x": 1.754, "y": 2.672, "rock": 2, "land": 3, "Cd": 1.53, "Cu": 16.24, "Pb": 43.6, "Co": 10.36, "Cr": 46.4, "Ni": 29.8, "Zn": 77.2}, {"id": 83, "x": 2.294, "y": 1.83, "rock": 2, "land": 2, "Cd": 0.67, "Cu": 8.72, "Pb": 32.76, "Co": 9.72, "Cr": 46.8, "Ni": 23.24, "Zn": 81.6}, {"id": 84, "x": 2.639, "y": 1.755, "rock": 3, "land": 1, "Cd": 1.01, "Cu": 5.96, "Pb": 67.36, "Co": 9.96, "Cr": 28.68, "Ni": 17.44, "Zn": 52.48}, {"id": 85, "x": 1.905, "y": 3.363, "rock": 1, "land": 3, "Cd": 0.5, "Cu": 16.68, "Pb": 39.76, "Co": 4.8, "Cr": 23.12, "Ni": 9.36, "Zn": 46.4}, {"id": 86, "x": 2.175, "y": 2.942, "rock": 3, "land": 2, "Cd": 1.665, "Cu": 37.0, "Pb": 43.8, "Co": 14.8, "Cr": 40.28, "Ni": 30.08, "Zn": 87.84}, {"id": 87, "x": 2.791, "y": 2.446, "rock": 2, "land": 3, "Cd": 1.52, "Cu": 16.32, "Pb": 57.52, "Co": 9.16, "Cr": 36.2, "Ni": 24.12, "Zn": 84.4}, {"id": 88, "x": 2.866, "y": 2.791, "rock": 2, "land": 3, "Cd": 1.315, "Cu": 14.0, "Pb": 45.96, "Co": 11.2, "Cr": 30.92, "Ni": 24.32, "Zn": 79.08}, {"id": 89, "x": 3.407, "y": 1.953, "rock": 2, "land": 2, "Cd": 1.325, "Cu": 9.92, "Pb": 38.4, "Co": 9.12, "Cr": 37.32, "Ni": 24.6, "Zn": 84.08}, {"id": 90, "x": 3.946, "y": 1.107, "rock": 2, "land": 2, "Cd": 0.495, "Cu": 7.52, "Pb": 33.0, "Co": 8.28, "Cr": 33.0, "Ni": 20.6, "Zn": 48.8}, {"id": 91, "x": 2.452, "y": 3.995, "rock": 1, "land": 3, "Cd": 0.395, "Cu": 12.72, "Pb": 28.24, "Co": 3.56, "Cr": 24.0, "Ni": 5.6, "Zn": 39.64}, {"id": 92, "x": 2.747, "y": 3.903, "rock": 1, "land": 2, "Cd": 0.38, "Cu": 3.55, "Pb": 21.12, "Co": 5.44, "Cr": 25.52, "Ni": 11.4, "Zn": 25.0}, {"id": 93, "x": 3.287, "y": 3.061, "rock": 5, "land": 3, "Cd": 2.085, "Cu": 39.0, "Pb": 52.4, "Co": 13.2, "Cr": 45.92, "Ni": 26.4, "Zn": 104.0}, {"id": 94, "x": 4.367, "y": 1.377, "rock": 5, "land": 3, "Cd": 2.61, "Cu": 24.0, "Pb": 47.2, "Co": 20.6, "Cr": 37.2, "Ni": 29.4, "Zn": 86.4}, {"id": 95, "x": 4.713, "y": 1.302, "rock": 2, "land": 3, "Cd": 0.845, "Cu": 10.28, "Pb": 33.64, "Co": 9.68, "Cr": 29.92, "Ni": 23.8, "Zn": 65.6}, {"id": 96, "x": 4.248, "y": 2.489, "rock": 4, "land": 1, "Cd": 1.22, "Cu": 5.52, "Pb": 48.8, "Co": 5.24, "Cr": 27.04, "Ni": 21.04, "Zn": 46.4}, {"id": 97, "x": 3.784, "y": 3.677, "rock": 2, "land": 1, "Cd": 0.64, "Cu": 6.68, "Pb": 34.32, "Co": 13.92, "Cr": 28.32, "Ni": 18.0, "Zn": 55.2}, {"id": 98, "x": 4.324, "y": 2.835, "rock": 2, "land": 1, "Cd": 1.65, "Cu": 8.88, "Pb": 60.0, "Co": 8.72, "Cr": 33.36, "Ni": 22.72, "Zn": 80.0}, {"id": 99, "x": 3.859, "y": 4.022, "rock": 3, "land": 3, "Cd": 1.433, "Cu": 43.6, "Pb": 60.8, "Co": 13.32, "Cr": 47.6, "Ni": 29.12, "Zn": 87.2}, {"id": 100, "x": 2.593, "y": 3.312, "rock": 3, "land": 3, "Cd": 0.325, "Cu": 8.08, "Pb": 26.2, "Co": 10.6, "Cr": 30.0, "Ni": 14.0, "Zn": 54.96}];
+var STATS = {"Cd": {"min": 0.325, "max": 3.78, "mean": 1.242, "std": 0.695, "median": 1.203, "q1": 0.677, "q3": 1.665}, "Cu": {"min": 3.55, "max": 154.6, "mean": 23.918, "std": 27.295, "median": 16.24, "q1": 9.24, "q3": 24.0}, "Pb": {"min": 18.68, "max": 300.0, "mean": 56.481, "std": 40.337, "median": 47.2, "q1": 35.32, "q3": 60.4}, "Co": {"min": 1.65, "max": 20.6, "mean": 9.823, "std": 3.469, "median": 10.12, "q1": 7.96, "q3": 12.52}, "Cr": {"min": 3.32, "max": 70.0, "mean": 34.882, "std": 9.86, "median": 34.56, "q1": 28.48, "q3": 40.8}, "Ni": {"min": 1.98, "max": 43.68, "mean": 20.764, "std": 7.675, "median": 21.52, "q1": 15.4, "q3": 25.36}, "Zn": {"min": 25.0, "max": 259.84, "mean": 77.963, "std": 34.951, "median": 75.44, "q1": 53.2, "q3": 91.6}};
+var CORR = [[1.0, 0.229, 0.259, 0.291, 0.485, 0.525, 0.54], [0.229, 1.0, 0.816, 0.161, 0.297, 0.238, 0.781], [0.259, 0.816, 1.0, 0.089, 0.188, 0.205, 0.784], [0.291, 0.161, 0.089, 1.0, 0.569, 0.714, 0.357], [0.485, 0.297, 0.188, 0.569, 1.0, 0.768, 0.48], [0.525, 0.238, 0.205, 0.714, 0.768, 1.0, 0.514], [0.54, 0.781, 0.784, 0.357, 0.48, 0.514, 1.0]];
+var ROCK_C = {"Argovian": 23, "Kimmeridgian": 39, "Sequanian": 26, "Portlandian": 3, "Quaternary": 9};
+var LAND_C = {"Forest": 18, "Pasture": 26, "Meadow": 53, "Tillage": 3};
+var COLORS = ["#f72585", "#7209b7", "#3a0ca3", "#4361ee", "#4cc9f0", "#06d6a0", "#ffd166"];
+var METALS = ["Cd", "Cu", "Pb", "Co", "Cr", "Ni", "Zn"];
+var HIST = {"Cd": {"labels": ["0.33", "0.56", "0.79", "1.02", "1.25", "1.48", "1.71", "1.94", "2.17", "2.40", "2.63", "2.86", "3.09", "3.32", "3.55"], "counts": [17, 17, 12, 7, 13, 11, 7, 6, 2, 4, 2, 1, 0, 0, 1]}, "Cu": {"labels": ["3.55", "13.62", "23.69", "33.76", "43.83", "53.90", "63.97", "74.04", "84.11", "94.18", "104.25", "114.32", "124.39", "134.46", "144.53"], "counts": [46, 29, 11, 5, 0, 2, 1, 0, 1, 0, 2, 1, 1, 0, 1]}, "Pb": {"labels": ["18.68", "37.43", "56.19", "74.94", "93.70", "112.45", "131.21", "149.96", "168.72", "187.47", "206.23", "224.98", "243.74", "262.49", "281.25"], "counts": [29, 42, 16, 4, 3, 0, 3, 1, 0, 0, 0, 1, 0, 0, 1]}, "Co": {"labels": ["1.65", "2.91", "4.18", "5.44", "6.70", "7.97", "9.23", "10.49", "11.76", "13.02", "14.28", "15.55", "16.81", "18.07", "19.34"], "counts": [2, 5, 9, 7, 3, 14, 14, 14, 14, 9, 7, 1, 0, 0, 1]}, "Cr": {"labels": ["3.32", "7.77", "12.21", "16.66", "21.10", "25.55", "29.99", "34.44", "38.88", "43.33", "47.77", "52.22", "56.66", "61.11", "65.55"], "counts": [1, 0, 1, 3, 11, 15, 18, 20, 13, 10, 4, 2, 1, 0, 1]}, "Ni": {"labels": ["1.98", "4.76", "7.54", "10.32", "13.10", "15.88", "18.66", "21.44", "24.22", "27.00", "29.78", "32.56", "35.34", "38.12", "40.90"], "counts": [2, 2, 8, 3, 12, 9, 14, 17, 15, 7, 6, 1, 3, 0, 1]}, "Zn": {"labels": ["25.00", "40.66", "56.31", "71.97", "87.62", "103.28", "118.94", "134.59", "150.25", "165.90", "181.56", "197.22", "212.87", "228.53", "244.18"], "counts": [5, 23, 20, 23, 12, 10, 1, 2, 1, 1, 1, 0, 0, 0, 1]}};
+var ROCK_LABELS = ["Argovian", "Kimmeridgian", "Sequanian", "Portlandian", "Quaternary"];
+var LAND_LABELS = ["Forest", "Pasture", "Meadow", "Tillage"];
+
+function alpha(hex,a){return hex+Math.round(a*255).toString(16).padStart(2,'0');}
+function lerp(a,b,t){return a+(b-a)*t;}
+function metalColor(val,mn,mx){
+  var t=Math.max(0,Math.min(1,(val-mn)/(mx-mn)));
+  var r=Math.round(lerp(14,247,t)),g=Math.round(lerp(165,37,t)),b=Math.round(lerp(233,133,t));
+  return 'rgba('+r+','+g+','+b+',0.85)';
+}
+
+// KPI Cards
+var kpiGrid=document.getElementById('kpiGrid');
+METALS.forEach(function(m,i){
+  var s=STATS[m];
+  var card=document.createElement('div');
+  card.className='kpi-card';
+  card.innerHTML='<div class="kpi-metal" style="color:'+COLORS[i]+'">'+m+'</div>'
+    +'<div class="kpi-mean" style="color:'+COLORS[i]+'">'+s.mean+'</div>'
+    +'<div class="kpi-unit">mean (ppm)</div>'
+    +'<div class="kpi-row"><span>Min <b>'+s.min+'</b></span> <span>Max <b>'+s.max+'</b></span> <span>Std <b>'+s.std+'</b></span></div>';
+  kpiGrid.appendChild(card);
+});
+
+// Stat table
+var tbody=document.getElementById('statTbody');
+METALS.forEach(function(m,i){
+  var s=STATS[m];
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td style="color:'+COLORS[i]+';font-weight:600">'+m+'</td>'
+    +'<td>'+s.min+'</td><td>'+s.q1+'</td><td>'+s.median+'</td><td>'+s.mean+'</td>'
+    +'<td>'+s.q3+'</td><td>'+s.max+'</td><td>'+s.std+'</td>';
+  tbody.appendChild(tr);
+});
+
+// Histograms
+var histGrid=document.getElementById('histGrid');
+METALS.forEach(function(m,i){
+  var div=document.createElement('div');
+  div.className='card';
+  var cid='hist_'+m;
+  div.innerHTML='<div class="card-title">'+m+' (ppm)</div><canvas id="'+cid+'"></canvas>';
+  histGrid.appendChild(div);
+  new Chart(document.getElementById(cid),{
+    type:'bar',
+    data:{labels:HIST[m].labels,datasets:[{label:m,data:HIST[m].counts,
+      backgroundColor:alpha(COLORS[i],.7),borderColor:COLORS[i],borderWidth:1,borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{
+      x:{ticks:{color:'#6666aa',maxRotation:45,font:{size:9}},grid:{color:'#1e1e40'}},
+      y:{ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}}}}
+  });
+});
+
+// Correlation Heatmap (bubble chart)
+var corrDatasets=[];
+METALS.forEach(function(m1,i){
+  METALS.forEach(function(m2,j){
+    var v=CORR[i][j];
+    corrDatasets.push({
+      data:[{x:j,y:i,r:Math.abs(v)*18+4}],
+      backgroundColor:'rgba('+(v>0?'76,201,240':'247,37,133')+','+Math.abs(v).toFixed(2)+')',
+      label:m1+'-'+m2+': '+v
+    });
+  });
+});
+new Chart(document.getElementById('corrCanvas'),{
+  type:'bubble',
+  data:{datasets:corrDatasets},
+  options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label;}}}},
+    scales:{
+      x:{min:-0.5,max:6.5,ticks:{callback:function(v){return METALS[v]||'';},color:'#8888bb'},grid:{color:'#1e1e40'}},
+      y:{min:-0.5,max:6.5,ticks:{callback:function(v){return METALS[v]||'';},color:'#8888bb'},grid:{color:'#1e1e40'}}
+    }}
+});
+
+// Scatter plot
+var scatX=document.getElementById('scatX');
+var scatY=document.getElementById('scatY');
+METALS.forEach(function(m,i){
+  var o1=new Option(m,m); if(i===0)o1.selected=true; scatX.appendChild(o1);
+  var o2=new Option(m,m); if(i===1)o2.selected=true; scatY.appendChild(o2);
+});
+var scatChart=null;
+function buildScat(){
+  var mx=scatX.value, my=scatY.value, ix=METALS.indexOf(mx);
+  var pts=ROWS.map(function(r){return {x:r[mx],y:r[my]};});
+  if(scatChart) scatChart.destroy();
+  scatChart=new Chart(document.getElementById('scatCanvas'),{
+    type:'scatter',
+    data:{datasets:[{label:mx+' vs '+my,data:pts,backgroundColor:alpha(COLORS[ix],.6),pointRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{
+      x:{title:{display:true,text:mx+' (ppm)',color:'#8888bb'},ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}},
+      y:{title:{display:true,text:my+' (ppm)',color:'#8888bb'},ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}}}}
+  });
+}
+scatX.addEventListener('change',buildScat);
+scatY.addEventListener('change',buildScat);
+buildScat();
+
+// Spatial Map
+var spatialSel=document.getElementById('spatialSel');
+METALS.forEach(function(m){spatialSel.appendChild(new Option(m,m));});
+var spatialChart=null;
+function buildSpatial(){
+  var m=spatialSel.value;
+  var vals=ROWS.map(function(r){return r[m];});
+  var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+  var pts=ROWS.map(function(r){return {x:r.x,y:r.y};});
+  var bgs=ROWS.map(function(r){return metalColor(r[m],mn,mx);});
+  if(spatialChart) spatialChart.destroy();
+  spatialChart=new Chart(document.getElementById('spatialCanvas'),{
+    type:'scatter',
+    data:{datasets:[{label:m,data:pts,backgroundColor:bgs,pointRadius:7,pointHoverRadius:9}]},
+    options:{plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:function(ctx){
+        var r=ROWS[ctx.dataIndex];
+        var rk=['Argovian','Kimmeridgian','Sequanian','Portlandian','Quaternary'][r.rock-1];
+        var lk=['Forest','Pasture','Meadow','Tillage'][r.land-1];
+        return ['Loc '+r.id, m+': '+r[m]+' ppm','Rock: '+rk,'Land: '+lk];
+      }}}},
+      scales:{
+        x:{title:{display:true,text:'X (km)',color:'#8888bb'},ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}},
+        y:{title:{display:true,text:'Y (km)',color:'#8888bb'},ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}}
+      }}
+  });
+}
+spatialSel.addEventListener('change',buildSpatial);
+buildSpatial();
+
+// Doughnuts
+var dOpts={cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#a0a0cc',font:{size:11},boxWidth:12}}}};
+new Chart(document.getElementById('rockCount'),{type:'doughnut',
+  data:{labels:Object.keys(ROCK_C),datasets:[{data:Object.values(ROCK_C),backgroundColor:COLORS,borderWidth:0}]},
+  options:dOpts});
+new Chart(document.getElementById('landCount'),{type:'doughnut',
+  data:{labels:Object.keys(LAND_C),datasets:[{data:Object.values(LAND_C),backgroundColor:['#06d6a0','#ffd166','#f72585','#4cc9f0'],borderWidth:0}]},
+  options:dOpts});
+
+// Mean by category charts
+function buildRockMetal(){
+  var m=document.getElementById('rockMetal').value, idx=METALS.indexOf(m);
+  var means=ROCK_LABELS.map(function(rk){
+    var vals=ROWS.filter(function(r){return ['Argovian','Kimmeridgian','Sequanian','Portlandian','Quaternary'][r.rock-1]===rk;}).map(function(r){return r[m];});
+    return vals.length?(vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(3):0;
+  });
+  if(window._rmc) window._rmc.destroy();
+  window._rmc=new Chart(document.getElementById('rockMetalChart'),{
+    type:'bar',
+    data:{labels:ROCK_LABELS,datasets:[{label:m+' mean',data:means,backgroundColor:alpha(COLORS[idx],.7),borderColor:COLORS[idx],borderWidth:1,borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{
+      x:{ticks:{color:'#8888bb',maxRotation:30},grid:{color:'#1e1e40'}},
+      y:{ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}}}}
+  });
+}
+function buildLandMetal(){
+  var m=document.getElementById('landMetal').value, idx=METALS.indexOf(m);
+  var means=LAND_LABELS.map(function(lk){
+    var vals=ROWS.filter(function(r){return ['Forest','Pasture','Meadow','Tillage'][r.land-1]===lk;}).map(function(r){return r[m];});
+    return vals.length?(vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(3):0;
+  });
+  if(window._lmc) window._lmc.destroy();
+  window._lmc=new Chart(document.getElementById('landMetalChart'),{
+    type:'bar',
+    data:{labels:LAND_LABELS,datasets:[{label:m+' mean',data:means,
+      backgroundColor:['rgba(6,214,160,.7)','rgba(255,209,102,.7)','rgba(247,37,133,.7)','rgba(76,201,240,.7)'],
+      borderColor:['#06d6a0','#ffd166','#f72585','#4cc9f0'],borderWidth:1,borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{
+      x:{ticks:{color:'#8888bb'},grid:{color:'#1e1e40'}},
+      y:{ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}}}}
+  });
+}
+var rmSel=document.getElementById('rockMetal'), lmSel=document.getElementById('landMetal');
+METALS.forEach(function(m){
+  rmSel.appendChild(new Option(m,m));
+  lmSel.appendChild(new Option(m,m));
+});
+rmSel.addEventListener('change',buildRockMetal);
+lmSel.addEventListener('change',buildLandMetal);
+buildRockMetal();
+buildLandMetal();
+</script>
+</body>
+</html>
