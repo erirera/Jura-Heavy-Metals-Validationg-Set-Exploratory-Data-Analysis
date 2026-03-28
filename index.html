@@ -49,8 +49,11 @@ footer{text-align:center;padding:24px;color:#444466;font-size:.78rem;border-top:
     <h1>Jura Heavy Metals &mdash; Exploratory Data Analysis</h1>
     <p>Validation Set &middot; Swiss Jura Region &middot; Spatial Geochemical Survey</p>
   </div>
-  <div class="badge">n = 100 samples</div>
-  <a href="https://erirera.github.io/Jura-Heavy-Metals-Training-Set-Exploratory-Data-Analysis/" class="nav-btn">&larr; Prediction Set</a>
+  <div class="nav-group" style="display:flex;gap:12px;margin-left:auto;align-items:center">
+    <div class="badge">n = 100 samples</div>
+    <a href="validation_maps.html" class="nav-btn">Spatial Maps &rarr;</a>
+    <a href="../Prediction set/index.html" class="nav-btn">&larr; Prediction Set</a>
+  </div>
 </header>
 <main>
 <div class="section-title">Summary Statistics</div>
@@ -76,12 +79,7 @@ footer{text-align:center;padding:24px;color:#444466;font-size:.78rem;border-top:
     <canvas id="scatCanvas"></canvas>
   </div>
 </div>
-<div class="section-title">Spatial Distribution</div>
-<div class="card" style="margin-bottom:36px">
-  <div class="card-title">Sample Locations &mdash; Color-coded by concentration</div>
-  <div class="controls">Metal: <select id="spatialSel"></select></div>
-  <canvas id="spatialCanvas" style="max-height:400px"></canvas>
-</div>
+
 <div class="section-title">By Rock Type &amp; Land Use</div>
 <div class="grid-2">
   <div class="card"><div class="card-title">Count by Rock Type</div><canvas id="rockCount"></canvas></div>
@@ -209,35 +207,7 @@ scatX.addEventListener('change',buildScat);
 scatY.addEventListener('change',buildScat);
 buildScat();
 
-// Spatial Map
-var spatialSel=document.getElementById('spatialSel');
-METALS.forEach(function(m){spatialSel.appendChild(new Option(m,m));});
-var spatialChart=null;
-function buildSpatial(){
-  var m=spatialSel.value;
-  var vals=ROWS.map(function(r){return r[m];});
-  var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
-  var pts=ROWS.map(function(r){return {x:r.x,y:r.y};});
-  var bgs=ROWS.map(function(r){return metalColor(r[m],mn,mx);});
-  if(spatialChart) spatialChart.destroy();
-  spatialChart=new Chart(document.getElementById('spatialCanvas'),{
-    type:'scatter',
-    data:{datasets:[{label:m,data:pts,backgroundColor:bgs,pointRadius:7,pointHoverRadius:9}]},
-    options:{plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:function(ctx){
-        var r=ROWS[ctx.dataIndex];
-        var rk=['Argovian','Kimmeridgian','Sequanian','Portlandian','Quaternary'][r.rock-1];
-        var lk=['Forest','Pasture','Meadow','Tillage'][r.land-1];
-        return ['Loc '+r.id, m+': '+r[m]+' ppm','Rock: '+rk,'Land: '+lk];
-      }}}},
-      scales:{
-        x:{title:{display:true,text:'X (km)',color:'#8888bb'},ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}},
-        y:{title:{display:true,text:'Y (km)',color:'#8888bb'},ticks:{color:'#6666aa'},grid:{color:'#1e1e40'}}
-      }}
-  });
-}
-spatialSel.addEventListener('change',buildSpatial);
-buildSpatial();
+
 
 // Doughnuts
 var dOpts={cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#a0a0cc',font:{size:11},boxWidth:12}}}};
